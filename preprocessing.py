@@ -56,7 +56,7 @@ class Dataset:
         tweet = self._remove_call_outs(tweet)
         tweet = self._fix_escaped_tokens(tweet) # map escaped tokens to a human-readable format (e.g. &amp; --> &)
         if tokenize:
-            print('Tokenizing...')
+            # print('Tokenizing...')
             tweet = self._tokenize(tweet)
         if remove_stopwords:
             tweet = self._remove_stopwords(tweet)
@@ -104,6 +104,6 @@ if __name__ == "__main__":
     print(len(D.tweets))
     print(D.raw_tweets[0])
     print(type(D.tweets[0]))
-    quit()
+    # quit()
     print(len(D.tweets), len(D.labels))
     print(D.tweets[0])
