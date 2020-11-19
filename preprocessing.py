@@ -13,7 +13,14 @@ class Dataset:
         self.escaped = {"&amp;": "&", "&gt;": ">", "&lt;": "<", "&apos;": "\'", "&quot;": '\"', "&#124;": "|", "&#91;": "[", "&#93;": "]"}
         self.tweet_col = tweet_col
         self.label_col = label_col
-        self.tweets, self.labels = self._load_data(filepath, preprocess)
+        self.raw_tweets, self.labels = self._load_data(filepath, preprocess)
+        self.tweets = None
+
+        # Pre-process tweets
+        if preprocess:
+            self.tweets = [self._preprocess_tweet(t, tokenize=True, remove_stopwords=True) for t in self.raw_tweets]
+
+
 
     def _split_row(self, row, num_cols):
         """Given a main row of the file, split on the comma."""
@@ -43,17 +50,16 @@ class Dataset:
         # Convert rows into 2-d list of rows split on commas
         rows = [self._split_row(r, num_cols) for r in rows]
 
-        # Pre-process tweets
-        if preprocess:
-            return [self._preprocess_tweet(r[self.tweet_col]) for r in rows], [r[self.label_col] for r in rows]
-
         return [r[self.tweet_col] for r in rows], [r[self.label_col] for r in rows]
 
-    def _preprocess_tweet(self, tweet):
+    def _preprocess_tweet(self, tweet, tokenize=False, remove_stopwords=False):
         tweet = self._remove_call_outs(tweet)
         tweet = self._fix_escaped_tokens(tweet) # map escaped tokens to a human-readable format (e.g. &amp; --> &)
-        tweet = self._tokenize(tweet)
-        tweet = self._remove_stopwords(tweet)
+        if tokenize:
+            print('Tokenizing...')
+            tweet = self._tokenize(tweet)
+        if remove_stopwords:
+            tweet = self._remove_stopwords(tweet)
         return tweet
 
     def _tokenize(self, tweet):
@@ -88,8 +94,16 @@ class Dataset:
             tweet = tweet.replace(e, self.escaped.get(e, f"<{e}>"))
         return tweet
 
+    def _augment_data():
+        # TODO: Implement this
+        pass
+
 if __name__ == "__main__":
     DATAFILE = "./Data/twitter_hate.csv"
     D = Dataset(DATAFILE, preprocess=True)
+    print(len(D.tweets))
+    print(D.raw_tweets[0])
+    print(type(D.tweets[0]))
+    quit()
     print(len(D.tweets), len(D.labels))
     print(D.tweets[0])
