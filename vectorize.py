@@ -85,6 +85,6 @@ if __name__ == "__main__":
     char_X = char_V.vectorize()
     print('Char TFIDF shape: ', char_X.shape)
 
-    emb_V = CharEmbeddings(D)
-    emb_V.parse()
+    # emb_V = CharEmbeddings(D)
+    # emb_V.parse()
     pass
