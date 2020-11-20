@@ -1,6 +1,8 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
+import numpy as np
 
 from preprocessing import Dataset
+
 
 class Vectorizer:
     def __init__(self, dataset):
@@ -9,6 +11,7 @@ class Vectorizer:
 
     def vectorize(X):
         raise NotImplementedError()
+
 
 class TFIDFWordVectorizer(Vectorizer):
     def __init__(self, dataset):
@@ -28,6 +31,7 @@ class TFIDFWordVectorizer(Vectorizer):
         term_doc_matrix = self.vectorizer.fit_transform(self.dataset.raw_tweets)
         self.vectors = term_doc_matrix.toarray()
         return self.vectors
+
 
 class TFIDFCharVectorizer(Vectorizer):
     def __init__(self, dataset, ngram_range):
@@ -51,6 +55,23 @@ class TFIDFCharVectorizer(Vectorizer):
         self.vectors = term_doc_matrix.toarray()
         return self.vectors
 
+
+class CharEmbeddings(Vectorizer):
+    def __init__(self, dataset):
+        super().__init__(dataset)
+
+    def parse(self):
+        vectors = {}
+        embeddings_path = 'Data/glove.840B.300d-char.txt'
+        with open(embeddings_path, 'r') as f:
+            for row in f:
+                split_row = row.strip().split(" ")
+                vector = np.array(split_row[1:], dtype=float)
+                char = split_row[0]
+                vectors[char] = vector
+        print(len(vectors))
+
+
 if __name__ == "__main__":
     DATAFILE = "./Data/twitter_hate.csv"
     D = Dataset(DATAFILE, preprocess=False)
@@ -64,4 +85,6 @@ if __name__ == "__main__":
     char_X = char_V.vectorize()
     print('Char TFIDF shape: ', char_X.shape)
 
+    emb_V = CharEmbeddings(D)
+    emb_V.parse()
     pass
