@@ -5,6 +5,7 @@ import numpy as np
 
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 
 from sklearn.metrics import confusion_matrix
 
@@ -28,6 +29,19 @@ class LogisticRegressionModel():
         preds = self.model.predict(X_test)
         return self.score, preds
 
+class RandomForestModel():
+    def __init__(self):
+        self.model = RandomForestClassifier()
+        self.score = None
+
+    def fit(self, X_train, y_train):
+        self.model.fit(X_train, y_train)
+
+    def predict(self, X_test, y_test):
+        self.model.predict_proba(X_test)
+        self.score = self.model.score(X_test, y_test)
+        preds = self.model.predict(X_test)
+        return self.score, preds
 
 if __name__ == "__main__":
     DATAFILE = "./Data/twitter_hate.csv"
@@ -45,6 +59,8 @@ if __name__ == "__main__":
     X_train, X_test, y_train, y_test = train_test_split(char_X, labels, test_size=0.33, random_state=42)
 
     m = LogisticRegressionModel()
+    #m = RandomForestModel()
+
     m.fit(X_train, y_train)
     score, preds = m.predict(X_test, y_test)
     print('Score: ', score)
