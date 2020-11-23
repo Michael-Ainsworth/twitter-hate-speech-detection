@@ -11,6 +11,7 @@ class Dataset:
     """
     def __init__(self, filepath, tweet_col=-1, label_col=-2, preprocess=True):
         self.escaped = {"&amp;": "&", "&gt;": ">", "&lt;": "<", "&apos;": "\'", "&quot;": '\"', "&#124;": "|", "&#91;": "[", "&#93;": "]"}
+        self.stop_words = ['i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'ou', "ou're", "ou've", "ou'll", "ou'd", 'you', "you're", "you've", "you'll", "you'd", 'your', 'yours', 'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she', "she's", 'her', 'hers', 'herself', 'it', "it's", 'its', 'itself', 'they', 'them', 'their', 'theirs', 'themselves', 'what', 'which', 'who', 'whom', 'this', 'that', "that'll", 'these', 'those', 'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'having', 'do', 'does', 'did', 'doing', 'a', 'an', 'the', 'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while', 'of', 'at', 'by', 'for', 'with', 'about', 'against', 'between', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 's', 't', 'can', 'will', 'just', 'don', "don't", 'should', "should've", 'now', 'd', 'll', 'm', 'o', 're', 've', 'y', 'ain', 'aren', "aren't", 'couldn', "couldn't", 'didn', "didn't", 'doesn', "doesn't", 'hadn', "hadn't", 'hasn', "hasn't", 'haven', "haven't", 'isn', "isn't", 'ma', 'mightn', "mightn't", 'mustn', "mustn't", 'needn', "needn't", 'shan', "shan't", 'shouldn', "shouldn't", 'wasn', "wasn't", 'weren', "weren't", 'won', "won't", 'wouldn', "wouldn't", 'I', "'"]
         self.tweet_col = tweet_col
         self.label_col = label_col
         self.raw_tweets, self.labels = self._load_data(filepath, preprocess)
@@ -55,6 +56,7 @@ class Dataset:
     def _preprocess_tweet(self, tweet, tokenize=False, remove_stopwords=False):
         tweet = self._remove_call_outs(tweet)
         tweet = self._fix_escaped_tokens(tweet) # map escaped tokens to a human-readable format (e.g. &amp; --> &)
+        tweet = self._remove_stopwords(tweet)
         if tokenize:
             # print('Tokenizing...')
             tweet = self._tokenize(tweet)
@@ -77,7 +79,8 @@ class Dataset:
         return clean_tokens
 
     def _remove_stopwords(self, tweet):
-        # TODO: Implement this
+        to_remove = re.compile(r'\b(' + r'|'.join(self.stop_words) + r')\b\s*')
+        tweet = re.sub(to_remove,'', str(tweet))
         return tweet
 
     def _remove_call_outs(self, tweet):
@@ -102,8 +105,8 @@ if __name__ == "__main__":
     DATAFILE = "./Data/twitter_hate.csv"
     D = Dataset(DATAFILE, preprocess=True)
     print(len(D.tweets))
-    print(D.raw_tweets[0])
-    print(type(D.tweets[0]))
+    #print(D.raw_tweets[0])
+    #print(type(D.tweets[0]))
     # quit()
-    print(len(D.tweets), len(D.labels))
-    print(D.tweets[0])
+    #print(len(D.tweets), len(D.labels))
+    #print(D.tweets[0])
