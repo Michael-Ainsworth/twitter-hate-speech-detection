@@ -56,7 +56,6 @@ class Dataset:
     def _preprocess_tweet(self, tweet, tokenize=False, remove_stopwords=False):
         tweet = self._remove_call_outs(tweet)
         tweet = self._fix_escaped_tokens(tweet) # map escaped tokens to a human-readable format (e.g. &amp; --> &)
-        tweet = self._remove_stopwords(tweet)
         if tokenize:
             # print('Tokenizing...')
             tweet = self._tokenize(tweet)
