@@ -3,7 +3,7 @@ import re
 
 from nltk.tokenize import wordpunct_tokenize
 
-class Dataset:
+class Data:
     """
         Class to load, pre-process, and store a Twitter dataset.
 
@@ -102,7 +102,7 @@ class Dataset:
 
 if __name__ == "__main__":
     DATAFILE = "./Data/twitter_hate.csv"
-    D = Dataset(DATAFILE, preprocess=True)
+    D = Data(DATAFILE, preprocess=True)
     print(len(D.tweets))
     #print(D.raw_tweets[0])
     #print(type(D.tweets[0]))

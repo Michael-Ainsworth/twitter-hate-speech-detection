@@ -1,7 +1,7 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
 
-from preprocessing import Dataset
+from preprocessing import Data
 
 
 class Vectorizer:
@@ -74,7 +74,7 @@ class CharEmbeddings(Vectorizer):
 
 if __name__ == "__main__":
     DATAFILE = "./Data/twitter_hate.csv"
-    D = Dataset(DATAFILE, preprocess=False)
+    D = Data(DATAFILE, preprocess=False)
 
     word_V = TFIDFWordVectorizer(D)
     word_X = word_V.vectorize()
