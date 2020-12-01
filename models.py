@@ -7,6 +7,8 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
+from sklearn import svm
+from sklearn.ensemble import AdaBoostClassifier
 from sklearn.preprocessing import StandardScaler    
 
 from sklearn.metrics import confusion_matrix, classification_report
@@ -51,6 +53,43 @@ class RandomForestModel():
         preds = self.model.predict(X_test)
         return self.score, preds
 
+class SVMModel():
+    def __init__(self):
+        self.params = {
+            "C": 1.0,
+            "kernel": 'rbf',
+            "gamma": 'scale',
+            "probability": True
+        }
+        self.model = svm.SVC(**self.params)
+        self.score = None
+        
+    def fit(self, X_train, y_train):
+        self.model.fit(X_train, y_train)
+    
+    def predict(self, X_test, y_test):
+        self.model.predict_proba(X_test)
+        self.score = self.model.score(X_test, y_test)
+        preds = self.model.predict(X_test)
+        return self.score, preds
+
+class AdaBoostModel():
+    def __init__(self):
+        self.params = {
+            "n_estimators": 50,
+            "learning_rate": 1
+        }
+        self.model = AdaBoostClassifier(**self.params)
+        self.score = None
+        
+    def fit(self, X_train, y_train):
+        self.model.fit(X_train, y_train)
+    
+    def predict(self, X_test, y_test):
+        self.model.predict_proba(X_test)
+        self.score = self.model.score(X_test, y_test)
+        preds = self.model.predict(X_test)
+        return self.score, preds
 
 class NeuralNet(torch.nn.Module):
     def __init__(self):
@@ -183,14 +222,17 @@ if __name__ == "__main__":
 
     # m = LogisticRegressionModel()
     # m = RandomForestModel()
-    model = train_neural_net(X_train, X_test, y_train, epochs=10, batch_size=64, learning_rate=0.001)
-    y_pred, y_pred_rounded = test_neural_net(model, y_test)
-    binary_metrics(y_test, y_pred, y_pred_rounded)
+    # m = SVMModel()
+    m = AdaBoostModel()
+    
+    #model = train_neural_net(X_train, X_test, y_train, epochs=10, batch_size=64, learning_rate=0.001)
+    #y_pred, y_pred_rounded = test_neural_net(model, y_test)
+    #binary_metrics(y_test, y_pred, y_pred_rounded)
 
 
-    # m.fit(X_train, y_train)
-    # score, preds = m.predict(X_test, y_test)
-    # print('Score: ', score)
-    # print(confusion_matrix(preds,y_test))
+    m.fit(X_train, y_train)
+    score, preds = m.predict(X_test, y_test)
+    print('Score: ', score)
+    print(confusion_matrix(preds,y_test))
 
     pass
