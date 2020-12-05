@@ -14,22 +14,30 @@ class Vectorizer:
 
 
 class TFIDFWordVectorizer(Vectorizer):
-    def __init__(self, dataset):
+    def __init__(self, dataset, ngram_range=(1, 2)):
         super().__init__(dataset)
         self.params = {
             "analyzer": "word",
             "tokenizer": dataset._tokenize,
             "stop_words": "english",
+            "ngram_range": ngram_range,
+            "max_df": 0.9,
+            "min_df": 0.001,
             "max_features": None,
             "smooth_idf": True,
             "sublinear_tf": False,
         }
         self.vectorizer = TfidfVectorizer(**self.params)
         self.vectors = None
+        self.vocab = None
 
-    def vectorize(self):
+    def vectorize(self, sparse=True):
         term_doc_matrix = self.vectorizer.fit_transform(self.dataset.raw_tweets)
-        self.vectors = term_doc_matrix.toarray()
+        self.vocab = self.vectorizer.vocabulary_
+        if not sparse:
+            self.vectors = term_doc_matrix.toarray()
+        else:
+            self.vectors = term_doc_matrix
         return self.vectors
 
 
@@ -80,10 +88,10 @@ if __name__ == "__main__":
     word_X = word_V.vectorize()
     print('Word TFIDF shape: ', word_X.shape)
 
-    ngram_range = (3,3)
-    char_V = TFIDFCharVectorizer(D, ngram_range)
-    char_X = char_V.vectorize()
-    print('Char TFIDF shape: ', char_X.shape)
+    # ngram_range = (3,3)
+    # char_V = TFIDFCharVectorizer(D, ngram_range)
+    # char_X = char_V.vectorize()
+    # print('Char TFIDF shape: ', char_X.shape)
 
     # emb_V = CharEmbeddings(D)
     # emb_V.parse()
