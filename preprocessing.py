@@ -57,10 +57,13 @@ class Data:
         tweet = self._remove_call_outs(tweet)
         tweet = self._fix_escaped_tokens(tweet) # map escaped tokens to a human-readable format (e.g. &amp; --> &)
         if tokenize:
-            # print('Tokenizing...')
+            #print('Tokenizing...')
             tweet = self._tokenize(tweet)
+
         if remove_stopwords:
             tweet = self._remove_stopwords(tweet)
+
+        tweet = [t for t in tweet if t] # remove blank spaces
         return tweet
 
     def _tokenize(self, tweet):
@@ -78,9 +81,8 @@ class Data:
         return clean_tokens
 
     def _remove_stopwords(self, tweet):
-        to_remove = re.compile(r'\b(' + r'|'.join(self.stop_words) + r')\b\s*')
-        tweet = re.sub(to_remove,'', str(tweet))
-        return tweet
+        """Remove stopwords in a list of tokens."""
+        return [t for t in tweet if t not in self.stop_words]
 
     def _remove_call_outs(self, tweet):
         """Remove any "@person" token."""
@@ -93,7 +95,7 @@ class Data:
         """Replace standard escaped tokens with human-readable versions and surround emojis with <>."""
         esc = re.findall(r"\&\#*\w+\;*", tweet)
         for e in esc:
-            tweet = tweet.replace(e, self.escaped.get(e, f"<{e}>"))
+            tweet = tweet.replace(e, self.escaped.get(e, "")) # replace with nothing for now. Maybe add this back later: f"<{e}>"
         return tweet
 
     def _augment_data():
