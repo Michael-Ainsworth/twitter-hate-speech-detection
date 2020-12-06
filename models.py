@@ -1,6 +1,7 @@
 from preprocessing import Data
-from vectorize import TFIDFCharVectorizer
+from vectorize import TFIDFCharVectorizer, TFIDFWordVectorizer, CharEmbeddings, DocEmbeddings
 from metrics import binary_metrics
+
 
 import numpy as np
 
@@ -10,7 +11,6 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn import svm
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.preprocessing import StandardScaler    
-
 from sklearn.metrics import confusion_matrix, classification_report
 
 import torch
@@ -33,10 +33,10 @@ class LogisticRegressionModel():
         # return clf
     
     def predict(self, X_test, y_test):
-        self.model.predict_proba(X_test)
+        raw_preds = self.model.predict_proba(X_test)
         self.score = self.model.score(X_test, y_test)
         preds = self.model.predict(X_test)
-        return self.score, preds
+        return self.score, preds, raw_preds
 
 
 class RandomForestModel():
@@ -48,10 +48,10 @@ class RandomForestModel():
         self.model.fit(X_train, y_train)
 
     def predict(self, X_test, y_test):
-        self.model.predict_proba(X_test)
+        raw_preds = self.model.predict_proba(X_test)
         self.score = self.model.score(X_test, y_test)
         preds = self.model.predict(X_test)
-        return self.score, preds
+        return self.score, preds, raw_preds
 
 class SVMModel():
     def __init__(self):
@@ -68,10 +68,10 @@ class SVMModel():
         self.model.fit(X_train, y_train)
     
     def predict(self, X_test, y_test):
-        self.model.predict_proba(X_test)
+        raw_preds = self.model.predict_proba(X_test)
         self.score = self.model.score(X_test, y_test)
         preds = self.model.predict(X_test)
-        return self.score, preds
+        return self.score, preds, raw_preds
 
 class AdaBoostModel():
     def __init__(self):
@@ -86,10 +86,10 @@ class AdaBoostModel():
         self.model.fit(X_train, y_train)
     
     def predict(self, X_test, y_test):
-        self.model.predict_proba(X_test)
+        raw_preds = self.model.predict_proba(X_test)
         self.score = self.model.score(X_test, y_test)
         preds = self.model.predict(X_test)
-        return self.score, preds
+        return self.score, preds, raw_preds
 
 class NeuralNet(torch.nn.Module):
     def __init__(self):
@@ -207,32 +207,56 @@ def test_neural_net(model, y_test):
 
 if __name__ == "__main__":
     DATAFILE = "./Data/twitter_hate.csv"
-    D = Data(DATAFILE, preprocess=False)
+    D = Data(DATAFILE, preprocess=True)
 
+    ##### RUN WORD TFIDF #####
+    # ngram_range = (2,2)
+    # word_V = TFIDFWordVectorizer(D, ngram_range)
+    # word_X = word_V.vectorize()
+    # print('Word TFIDF shape: ', word_X.shape)
+
+    ##### RUN CHAR TFIDF #####
     ngram_range = (2,2)
     char_V = TFIDFCharVectorizer(D, ngram_range)
     char_X = char_V.vectorize()
     print('Char TFIDF shape: ', char_X.shape)
 
+    ##### RUN CHAR EMBEDDINGS #####
+    # char_emb = CharEmbeddings(dataset=D, emb_path='./Data', emb_dim=300)
+    # char_vecs = char_emb.vectorize()
+    # print('Char embeddings shape: ', char_vecs.shape)
+
+    ##### RUN DOC EMBEDDINGS #####
+    # doc_emb = DocEmbeddings(D, emb_path="./Data", emb_dim=300)
+    # doc_vecs = doc_emb.vectorize(success_rate=True)
+    # print('Doc embeddings shape: ', doc_vecs.shape)
+
+
+    ##### Generate Labels #####
     labels = np.array(D.labels).astype(float)
     labels = np.where(labels < 0.5, 1, 0)
     print('Label shape: ', labels.shape)
+    print('Data shape: ', char_X.shape)
 
+
+    ##### Train test split #####
     X_train, X_test, y_train, y_test = train_test_split(char_X, labels, test_size=0.33, random_state=42)
 
-    # m = LogisticRegressionModel()
-    # m = RandomForestModel()
-    # m = SVMModel()
-    m = AdaBoostModel()
     
-    #model = train_neural_net(X_train, X_test, y_train, epochs=10, batch_size=64, learning_rate=0.001)
-    #y_pred, y_pred_rounded = test_neural_net(model, y_test)
-    #binary_metrics(y_test, y_pred, y_pred_rounded)
+    # m = LogisticRegressionModel()
+    m = RandomForestModel()
+    # m = SVMModel()
+    # m = AdaBoostModel()
+    
+    # model = train_neural_net(X_train, X_test, y_train, epochs=10, batch_size=64, learning_rate=0.001)
+    # y_pred, y_pred_rounded = test_neural_net(model, y_test)
+    # binary_metrics(y_test, y_pred, y_pred_rounded)
 
 
     m.fit(X_train, y_train)
-    score, preds = m.predict(X_test, y_test)
-    print('Score: ', score)
-    print(confusion_matrix(preds,y_test))
+    score, preds, raw_preds = m.predict(X_test, y_test)
+
+    binary_metrics(y_test, raw_preds, preds)
+
 
     pass

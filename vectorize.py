@@ -66,19 +66,48 @@ class TFIDFCharVectorizer(Vectorizer):
 
 
 class CharEmbeddings(Vectorizer):
-    def __init__(self, dataset):
+    def __init__(self, dataset, emb_path, emb_dim=300):
         super().__init__(dataset)
+        self.emb_dim = emb_dim
+        self.embeddings = self.parse(emb_path)
 
-    def parse(self):
-        vectors = {}
-        embeddings_path = 'Data/glove.840B.300d-char.txt'
+    def parse(self, path):
+        # return embeddings
+        embeddings = {}
+        embeddings_path = f'{path}/glove.840B.300d-char.txt'
         with open(embeddings_path, 'r') as f:
             for row in f:
                 split_row = row.strip().split(" ")
                 vector = np.array(split_row[1:], dtype=float)
                 char = split_row[0]
-                vectors[char] = vector
-        print(len(vectors))
+                embeddings[char] = vector[:self.emb_dim]
+        
+        return embeddings
+
+    def _make_vector(self, tweet):
+        components = []
+
+        for char in tweet:
+            
+            if char in self.embeddings:
+                components.append(self.embeddings[char])
+
+        # Create matrix
+        doc_matrix = np.array(components)
+
+        # Calculate average embedding for this document
+        avg = np.sum(doc_matrix, axis=0) / doc_matrix.shape[0]
+
+        return avg
+
+    def vectorize(self):
+        # Vectorize each tweet
+        vecs = [self._make_vector(''.join(tweet)) for tweet in self.dataset.tweets]
+        
+        # Create matrix with all valid document embeddings
+        self.vectors = np.stack(vecs, axis=0)
+
+        return self.vectors
 
 
 class DocEmbeddings(Vectorizer):
@@ -158,9 +187,9 @@ if __name__ == "__main__":
     DATAFILE = "./Data/twitter_hate.csv"
     D = Data(DATAFILE, preprocess=True)
 
-    DE = DocEmbeddings(D, emb_path="./Data", emb_dim=300)
-    doc_vecs = DE.vectorize(success_rate=True)
-    print(doc_vecs.shape)
+    # DE = DocEmbeddings(D, emb_path="./Data", emb_dim=300)
+    # doc_vecs = DE.vectorize(success_rate=True)
+    # print(doc_vecs.shape)
 
     # word_V = TFIDFWordVectorizer(D)
     # word_X = word_V.vectorize()
@@ -172,6 +201,10 @@ if __name__ == "__main__":
     # char_X = char_V.vectorize()
     # print('Char TFIDF shape: ', char_X.shape)
 
-    # emb_V = CharEmbeddings(D)
-    # emb_V.parse()
+
+    emb_V = CharEmbeddings(dataset=D, emb_path='./Data', emb_dim=5)
+    # emb_V.parse(path='./Data')
+    # emb_V.test()
+    vecs = emb_V.vectorize()
+    # emb_V
     pass

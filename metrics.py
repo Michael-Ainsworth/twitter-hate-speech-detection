@@ -3,15 +3,15 @@ from sklearn.metrics import roc_curve, roc_auc_score
 from sklearn.metrics import precision_recall_curve
 import matplotlib.pyplot as plt
 
-def binary_metrics(y_test, y_pred, y_pred_rounded):
-    print(confusion_matrix(y_test, y_pred_rounded))
-    print(classification_report(y_test, y_pred_rounded))
+def binary_metrics(y_test, y_pred_raw, y_pred):
+    print(confusion_matrix(y_test, y_pred))
+    print(classification_report(y_test, y_pred))
 
-    fpr, tpr, _ = roc_curve(y_test, y_pred)
-    auc_value = roc_auc_score(y_test, y_pred)
+    fpr, tpr, _ = roc_curve(y_test, y_pred_raw[:,1])
+    auc_value = roc_auc_score(y_test, y_pred_raw[:,1])
 
-    precisions, recalls, _ = precision_recall_curve(y_test, y_pred)
-    pr_no_skill = 1 - sum(y_pred_rounded) / len(y_pred_rounded)
+    precisions, recalls, _ = precision_recall_curve(y_test, y_pred_raw[:,1])
+    pr_no_skill = sum(y_test) / len(y_test)
 
     plt.figure(figsize = (14,7))
     plt.subplot(1,2,1)
