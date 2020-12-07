@@ -12,7 +12,8 @@ from sklearn import svm
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.preprocessing import StandardScaler    
 from sklearn.metrics import confusion_matrix, classification_report
-
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV
 import torch
 import torch.optim as optim
 import torch.nn.functional as F
@@ -21,15 +22,41 @@ from torch.utils.data import Dataset, DataLoader
 
 class LogisticRegressionModel():
     def __init__(self):
-        self.params = {
-            "penalty": 'l2',
-            "verbose": 0
-        }
-        self.model = LogisticRegression(**self.params)
+        
+        #initialize score
         self.score = None
-
+        
+        #-----COMMENT OUT THIS LINE WHEN USING HYPERPARAMETER TUNING-----#
+        self.model = LogisticRegression()
+        #----------------------------------------------------------------#
+        
+        """
+        ############### HYPERPARAMETER SEARCH  ###############
+        #create base model for search
+        self.model_base = LogisticRegression()
+        
+        # Set Regularizer Search Vector
+        self.lr_C = [0.00001,0.0001,0.001,0.01,0.1,1,10,100]
+        
+        #Set Intercept Search Vector
+        self.lr_fit_intercept = [True,False]
+        
+        #Set Solver Vector
+        self.lr_solver = ['lbfgs','sag','saga']
+        
+        #Create Hyperparameter Grid as Dictionary
+        self.grid = {'C': self.lr_C,
+                     'fit_intercept': self.lr_fit_intercept,
+                     'solver': self.lr_solver}
+        
+        #Create exhaustive search estimator
+        self.model = GridSearchCV(estimator = self.model_base, param_grid = self.grid, cv = 5, verbose = 0, n_jobs = -1)
+        ########## END HYPERPARAMETER SEARCH  ##########
+        """
+        
     def fit(self, X_train, y_train):
         self.model.fit(X_train, y_train)
+        #print(self.model.best_params_)
         # return clf
     
     def predict(self, X_test, y_test):
@@ -41,11 +68,59 @@ class LogisticRegressionModel():
 
 class RandomForestModel():
     def __init__(self):
-        self.model = RandomForestClassifier()
+        
+        #initialize score
         self.score = None
-
+        
+        #-----COMMENT OUT THIS LINE WHEN USING HYPERPARAMETER TUNING-----#
+        self.model = RandomForestClassifier()
+        #----------------------------------------------------------------#
+            
+        """
+        ############### HYPERPARAMETER SEARCH  ###############
+        #create base model for search
+        self.model_base = RandomForestClassifier()
+        
+        # Set Estimator Search Vector
+        self.rf_n_estimators = [int(x) for x in np.linspace(200,1000,5)]
+        self.rf_n_estimators.append(1500)
+        self.rf_n_estimators.append(2000)
+        
+        #Set Depth Search Vector
+        self.rf_max_depth = [int(x) for x in np.linspace(5,55,11)]
+        self.rf_max_depth.append(None)
+        
+        #Set Criterion Vector
+        self.rf_criterion = ['gini', 'entropy']
+        
+        #set Min Sample Split Vector
+        self.rf_min_samples_split = [int(x) for x in np.linspace(2,10,9)]
+        
+        #set Max_Features
+        self.rf_max_features = ['auto', 'sqrt', 'log2']
+        #Set Impurity Vector
+        self.rf_min_impurity_decrease = [0.0,0.05,0.1]
+        
+        #Set Bootstrap
+        self.rf_bootstrap = [True, False]
+        
+        #Create Hyperparameter Grid as Dictionary
+        self.grid = {'n_estimators': self.rf_n_estimators,
+                     'max_depth': self.rf_max_depth,
+                     'criterion': self.rf_criterion,
+                     'min_samples_split': self.rf_min_samples_split,
+                     'max_features': self.rf_max_features,
+                     'min_impurity_decrease': self.rf_min_impurity_decrease,
+                     'bootstrap': self.rf_bootstrap}
+        
+        #Create random search estimator
+        self.model = RandomizedSearchCV(estimator = self.model_base, param_distributions = self.grid, n_iter = 100, cv = 5, verbose = 2, random_state = 42, n_jobs = -1)
+        ########## END HYPERPARAMETER SEARCH  ##########
+        """
+    
     def fit(self, X_train, y_train):
         self.model.fit(X_train, y_train)
+        #print(self.model.best_params_)
 
     def predict(self, X_test, y_test):
         raw_preds = self.model.predict_proba(X_test)
@@ -55,17 +130,49 @@ class RandomForestModel():
 
 class SVMModel():
     def __init__(self):
-        self.params = {
-            "C": 1.0,
-            "kernel": 'rbf',
-            "gamma": 'scale',
-            "probability": True
-        }
-        self.model = svm.SVC(**self.params)
+        
+        #initialize score
         self.score = None
+        
+        #-----COMMENT OUT THIS LINE WHEN USING HYPERPARAMETER TUNING-----#
+        self.model = svm.SVC()
+        #----------------------------------------------------------------#
+        
+        """
+        ############### HYPERPARAMETER SEARCH  ###############
+        #Create base model for search
+        self.model_base = svm.SVC()
+        
+        # Set C Search Vector
+        self.svc_C = [0.00001,0.0001,0.001,0.01,0.1,1,10,100]
+        
+        #Set Kernel Search Vector
+        self.svc_kernel= ['rbf']
+        
+        #Set Gamma Vector
+        self.svc_gamma = ['scale', 'auto']
+        
+        #set Probability Vector
+        self.svc_probability = [True]
+        
+        #set Random State
+        self.svc_random_state = [int(x) for x in np.linspace(0,50,5)]
+        
+        #Create Hyperparameter Grid as Dictionary
+        self.grid = {'C': self.svc_C,
+                     'kernel': self.svc_kernel,
+                     'gamma': self.svc_gamma,
+                     'probability': self.svc.probability,
+                     'random_state': self.svc.random_state}
+        
+        #Create grid search estimator
+        self.model = GridSearchCV(estimator = self.model_base, param_grid = self.grid, cv = 5, verbose = 0, random_state = 42, n_jobs = -1)
+        ########## END HYPERPARAMETER SEARCH  ##########
+        """
         
     def fit(self, X_train, y_train):
         self.model.fit(X_train, y_train)
+        #print(self.model.best_params_)
     
     def predict(self, X_test, y_test):
         raw_preds = self.model.predict_proba(X_test)
@@ -75,15 +182,42 @@ class SVMModel():
 
 class AdaBoostModel():
     def __init__(self):
-        self.params = {
-            "n_estimators": 50,
-            "learning_rate": 1
-        }
-        self.model = AdaBoostClassifier(**self.params)
+        
+        #initialize score
         self.score = None
+        
+        #-----COMMENT OUT THIS LINE WHEN USING HYPERPARAMETER TUNING-----#
+        self.model = AdaBoostClassifier()
+        #----------------------------------------------------------------#
+        
+        """
+        ############### HYPERPARAMETER SEARCH  ###############
+        #Create base model for search
+        self.model_base = AdaBoostClassifier(**self.params)
+        
+        # Set Base Estimator Search Vector
+        self.ada_base_estimator = [DecisionTreeClassifier(max_depth=1),DecisionTreeClassifier(max_depth=2),DecisionTreeClassifier(max_depth=3)]
+        
+        #Set number of estimators Search Vector
+        self.ada_n_estimators = [int(x) for x in np.linspace(30,300,10)]
+        
+        #set Learning Rate Search Vector
+        self.ada_learning_rate = [0.0001,0.001,0.01,0.1,1,10]
+        
+        #Create Hyperparameter Grid as Dictionary
+        self.grid = {'base_estimator': self.ada_base_estimator,
+                     'n_estimators': self.ada_n_estimators,
+                     'criterion': self.rf_criterion,
+                     'learning_rate': self.ada_learning_rate}
+        
+        #Create random search estimator
+        self.model = GridSearchCV(estimator = self.model_base, param_grid = self.grid, cv = 5, verbose = 0, n_jobs = -1)
+        ########## END HYPERPARAMETER SEARCH  ######### 
+        """
         
     def fit(self, X_train, y_train):
         self.model.fit(X_train, y_train)
+        #print(self.model.best_params_)
     
     def predict(self, X_test, y_test):
         raw_preds = self.model.predict_proba(X_test)
