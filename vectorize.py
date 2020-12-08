@@ -81,14 +81,14 @@ class CharEmbeddings(Vectorizer):
                 vector = np.array(split_row[1:], dtype=float)
                 char = split_row[0]
                 embeddings[char] = vector[:self.emb_dim]
-        
+
         return embeddings
 
     def _make_vector(self, tweet):
         components = []
 
         for char in tweet:
-            
+
             if char in self.embeddings:
                 components.append(self.embeddings[char])
 
@@ -103,7 +103,7 @@ class CharEmbeddings(Vectorizer):
     def vectorize(self):
         # Vectorize each tweet
         vecs = [self._make_vector(''.join(tweet)) for tweet in self.dataset.tweets]
-        
+
         # Create matrix with all valid document embeddings
         self.vectors = np.stack(vecs, axis=0)
 
@@ -111,24 +111,26 @@ class CharEmbeddings(Vectorizer):
 
 
 class DocEmbeddings(Vectorizer):
-    def __init__(self, dataset, *, scheme="unweighted", emb_path, emb_dim):
+    def __init__(self, dataset, *, scheme="unweighted", emb_path, emb_dim, limit=-1):
         super().__init__(dataset)
         self.emb_dim = emb_dim
         self.scheme = scheme
 
-        self.embeddings = self.load_word_embeddings(emb_path) # can add limit argument to make development a bit faster
+        self.embeddings = self.load_word_embeddings(emb_path, lim=limit) # can add limit argument to make development a bit faster
+        self.vectors = None
+        self.vector_indices = None
 
         # Some counters to compute metrics for the vectorization
         self.total_tokens = 0
         self.successful_replacements = 0
 
-    def load_word_embeddings(self, path, limit=-1):
+    def load_word_embeddings(self, path, lim=-1):
         file_name = f"{path}/glove.6B.{self.emb_dim}d.txt"
         print(f"Loading GloVe word embedding from {file_name}")
         embeddings = {}
         with open(file_name, encoding="utf-8") as f:
             for idx, line in enumerate(f):
-                if idx == limit:
+                if idx == lim:
                      break
                 line = line.strip().split(" ") # the first token on each line is the word, followed by the vector
                 if line[0].lower() not in embeddings:
@@ -170,6 +172,7 @@ class DocEmbeddings(Vectorizer):
         vecs = [self._make_vector(tweet) for tweet in self.dataset.tweets]
 
         # Some tweets can't be vectorized, so drop those
+        self.vector_indices = np.array([i for i in range(len(vecs)) if vecs[i] is not None])
         reduced_vecs = [v for v in vecs if v is not None]
 
         # Create matrix with all valid document embeddings
@@ -187,9 +190,10 @@ if __name__ == "__main__":
     DATAFILE = "./Data/twitter_hate.csv"
     D = Data(DATAFILE, preprocess=True)
 
-    # DE = DocEmbeddings(D, emb_path="./Data", emb_dim=300)
-    # doc_vecs = DE.vectorize(success_rate=True)
-    # print(doc_vecs.shape)
+    DE = DocEmbeddings(D, emb_path="./Data", emb_dim=50)
+    doc_vecs = DE.vectorize(success_rate=True)
+    print(DE.vectors.shape)
+    print(DE.vector_indices.shape)
 
     # word_V = TFIDFWordVectorizer(D)
     # word_X = word_V.vectorize()
@@ -202,9 +206,9 @@ if __name__ == "__main__":
     # print('Char TFIDF shape: ', char_X.shape)
 
 
-    emb_V = CharEmbeddings(dataset=D, emb_path='./Data', emb_dim=5)
+    #emb_V = CharEmbeddings(dataset=D, emb_path='./Data', emb_dim=5)
     # emb_V.parse(path='./Data')
     # emb_V.test()
-    vecs = emb_V.vectorize()
+    #vecs = emb_V.vectorize()
     # emb_V
     pass
