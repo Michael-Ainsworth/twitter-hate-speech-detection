@@ -4,13 +4,14 @@ from sklearn.metrics import precision_recall_curve
 import matplotlib.pyplot as plt
 
 def binary_metrics(y_test, y_pred_raw, y_pred):
-    print(confusion_matrix(y_test, y_pred))
+    tn, fp, fn, tp = (confusion_matrix(y_test, y_pred)).ravel()
+    print('TN: ',tn,'FP: ',fp,'FN: ',fn,'TP: ',tp)
     print(classification_report(y_test, y_pred))
 
-    fpr, tpr, _ = roc_curve(y_test, y_pred_raw[:,1])
-    auc_value = roc_auc_score(y_test, y_pred_raw[:,1])
+    fpr, tpr, _ = roc_curve(y_test, y_pred_raw)
+    auc_value = roc_auc_score(y_test, y_pred_raw)
 
-    precisions, recalls, _ = precision_recall_curve(y_test, y_pred_raw[:,1])
+    precisions, recalls, _ = precision_recall_curve(y_test, y_pred_raw)
     pr_no_skill = sum(y_test) / len(y_test)
 
     plt.figure(figsize = (14,7))

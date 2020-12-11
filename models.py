@@ -17,7 +17,10 @@ from sklearn.model_selection import GridSearchCV
 import torch
 import torch.optim as optim
 import torch.nn.functional as F
+import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
+from scipy.sparse import csr_matrix
+
 
 
 class LogisticRegressionModel():
@@ -63,7 +66,7 @@ class LogisticRegressionModel():
         raw_preds = self.model.predict_proba(X_test)
         self.score = self.model.score(X_test, y_test)
         preds = self.model.predict(X_test)
-        return self.score, preds, raw_preds
+        return self.score, preds, raw_preds[:,1]
 
 
 class RandomForestModel():
@@ -126,7 +129,7 @@ class RandomForestModel():
         raw_preds = self.model.predict_proba(X_test)
         self.score = self.model.score(X_test, y_test)
         preds = self.model.predict(X_test)
-        return self.score, preds, raw_preds
+        return self.score, preds, raw_preds[:,1]
 
 class SVMModel():
     def __init__(self):
@@ -178,7 +181,7 @@ class SVMModel():
         raw_preds = self.model.predict_proba(X_test)
         self.score = self.model.score(X_test, y_test)
         preds = self.model.predict(X_test)
-        return self.score, preds, raw_preds
+        return self.score, preds, raw_preds[:,1]
 
 class AdaBoostModel():
     def __init__(self):
@@ -223,74 +226,71 @@ class AdaBoostModel():
         raw_preds = self.model.predict_proba(X_test)
         self.score = self.model.score(X_test, y_test)
         preds = self.model.predict(X_test)
-        return self.score, preds, raw_preds
-
-class NeuralNet(torch.nn.Module):
-    def __init__(self):
-        super(NeuralNet, self).__init__()
-        self.linear1 = torch.nn.Linear(X_train.shape[1], 64)
-        self.linear2 = torch.nn.Linear(64, 64)
-        self.linear3 = torch.nn.Linear(64, 1)
-
-    def forward(self, x):
-        x = F.relu(self.linear1(x))
-        x = F.relu(self.linear2(x))
-        x = self.linear3(x)
-        return x
-
+        return self.score, preds, raw_preds[:,1]
 
 class trainData(Dataset):
-
+    
     def __init__(self, X_data, y_data):
         self.X_data = X_data
         self.y_data = y_data
-
+        
     def __getitem__(self, index):
         return self.X_data[index], self.y_data[index]
-
+        
     def __len__ (self):
         return len(self.X_data)
-
-
+    
 class testData(Dataset):
-
+    
     def __init__(self, X_data):
         self.X_data = X_data
-
+        
     def __getitem__(self, index):
         return self.X_data[index]
-
+        
     def __len__ (self):
         return len(self.X_data)
 
-
+class binaryClassification(nn.Module):
+    def __init__(self):
+        super(binaryClassification, self).__init__()
+        # Number of input features is 12.
+        self.layer_1 = nn.Linear(X_train.shape[1], 64) 
+        self.layer_2 = nn.Linear(64, 64)
+        self.layer_out = nn.Linear(64, 1) 
+        
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(p=0.1)
+        self.batchnorm1 = nn.BatchNorm1d(64)
+        self.batchnorm2 = nn.BatchNorm1d(64)
+        
+    def forward(self, inputs):
+        x = self.relu(self.layer_1(inputs))
+        x = self.batchnorm1(x)
+        x = self.relu(self.layer_2(x))
+        x = self.batchnorm2(x)
+        x = self.dropout(x)
+        x = self.layer_out(x)
+        
+        return x
+    
 def binary_acc(y_pred, y_test):
     y_pred_tag = torch.round(torch.sigmoid(y_pred))
 
     correct_results_sum = (y_pred_tag == y_test).sum().float()
     acc = correct_results_sum/y_test.shape[0]
     acc = torch.round(acc * 100)
-
+    
     return acc
 
-
-def train_neural_net(X_train, X_test, y_train, epochs, batch_size, learning_rate):
-    scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.fit_transform(X_test)
-    print(X_train)
-
-    train_data = trainData(torch.FloatTensor(X_train),
-                       torch.FloatTensor(y_train))
-
-    train_loader = DataLoader(dataset=train_data, batch_size=batch_size, shuffle=True)
-
+def train_neural_net(train_loader, epochs, learning_rate):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(device)
 
-    model = NeuralNet()
+    model = binaryClassification()
     model.to(device)
     print(model)
-    criterion = torch.nn.BCEWithLogitsLoss()
+    criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     model.train()
@@ -312,31 +312,28 @@ def train_neural_net(X_train, X_test, y_train, epochs, batch_size, learning_rate
             epoch_loss += loss.item()
             epoch_acc += acc.item()
 
+
         print(f'Epoch {e+0:03}: | Loss: {epoch_loss/len(train_loader):.5f} | Acc: {epoch_acc/len(train_loader):.3f}')
     return model
 
-
-def test_neural_net(model, y_test):
-    test_data = testData(torch.FloatTensor(X_test))
-    test_loader = DataLoader(dataset=test_data, batch_size=1)
+def test_neural_net(model, test_loader):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     y_pred_list = []
-    y_pred_list_round = []
-
+    y_pred_list_raw = []
     model.eval()
     with torch.no_grad():
         for X_batch in test_loader:
             X_batch = X_batch.to(device)
             y_test_pred = model(X_batch)
-            y_pred_list.append(float(y_test_pred.cpu().numpy()))
-            y_test_pred_round = torch.sigmoid(y_test_pred)
-            y_pred_tag = torch.round(y_test_pred_round)
-            y_pred_list_round.append(y_pred_tag.cpu().numpy())
+            y_test_pred = torch.sigmoid(y_test_pred)
+            y_pred_list_raw.append(y_test_pred.cpu().numpy()[0][0])
+            y_pred_tag = torch.round(y_test_pred)
+            y_pred_list.append(y_pred_tag.cpu().numpy())
 
-    y_pred_list_round = [a.squeeze().tolist() for a in y_pred_list_round]
-
-    return y_pred_list, y_pred_list_round
+    y_pred_list = [a.squeeze().tolist() for a in y_pred_list]
+    
+    return np.array(y_pred_list), np.array(y_pred_list_raw)
 
 
 if __name__ == "__main__":
@@ -344,7 +341,7 @@ if __name__ == "__main__":
     D = Data(DATAFILE, preprocess=True)
     DE = False # boolean for checking if we're using doc embeddings or not. Just for convenience
 
-    ##### RUN WORD TFIDF #####
+    #### RUN WORD TFIDF #####
     # ngram_range = (2,2)
     # word_V = TFIDFWordVectorizer(D, ngram_range)
     # word_X = word_V.vectorize()
@@ -355,6 +352,7 @@ if __name__ == "__main__":
     # char_V = TFIDFCharVectorizer(D, ngram_range)
     # char_X = char_V.vectorize()
     # print('Char TFIDF shape: ', char_X.shape)
+    
 
     ##### RUN CHAR EMBEDDINGS #####
     # char_emb = CharEmbeddings(dataset=D, emb_path='./Data', emb_dim=300)
@@ -368,32 +366,49 @@ if __name__ == "__main__":
     print('Doc embeddings shape: ', doc_vecs.shape)
 
 
-    ##### Generate Labels #####
+    #### Generate Labels #####
     if DE:
         labels = np.array(D.labels).astype(float)[doc_emb.vector_indices]
     else:
         labels = np.array(D.labels).astype(float)
     labels = np.where(labels < 0.5, 1, 0)
     print('Label shape: ', labels.shape)
-    print('Data shape: ', doc_vecs.shape)
+   
 
 
     ##### Train test split #####
     X_train, X_test, y_train, y_test = train_test_split(doc_vecs, labels, test_size=0.33, random_state=42)
 
-
     # m = LogisticRegressionModel()
-    m = RandomForestModel()
+    # m = RandomForestModel()
     # m = SVMModel()
     # m = AdaBoostModel()
 
-    # model = train_neural_net(X_train, X_test, y_train, epochs=10, batch_size=64, learning_rate=0.001)
-    # y_pred, y_pred_rounded = test_neural_net(model, y_test)
-    # binary_metrics(y_test, y_pred, y_pred_rounded)
+    # m.fit(X_train, y_train)
+    # score, preds, raw_preds = m.predict(X_test, y_test)
+    # print(score)
+    # binary_metrics(y_test, raw_preds, preds)
 
 
-    m.fit(X_train, y_train)
-    score, preds, raw_preds = m.predict(X_test, y_test)
+
+    ##### Neural Network #####
+    if type(X_train) == csr_matrix:
+        X_train = X_train.todense()
+        X_test = X_test.todense()
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.fit_transform(X_test)
+
+    train_data = trainData(torch.FloatTensor(X_train), 
+                        torch.FloatTensor(y_train))
+    test_data = testData(torch.FloatTensor(X_test))
+
+    train_loader = DataLoader(dataset=train_data, batch_size=64, shuffle=True)
+    test_loader = DataLoader(dataset=test_data, batch_size=1)
+
+    model = train_neural_net(train_loader, 10, 0.001)
+
+    preds, raw_preds = test_neural_net(model, test_loader)
 
     binary_metrics(y_test, raw_preds, preds)
 
