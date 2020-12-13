@@ -188,12 +188,36 @@ class Data:
 
         return new_data
 
+    def _balance_dataset(self):
+        temp_labels = np.array(self.labels)
+        length_0 = np.where(temp_labels == '0')[0].shape[0]
+
+        #Find indices of non-hate speech classes
+        indices_1 = np.where(temp_labels == '1')
+        indices_2 = np.where(temp_labels == '2')
+
+        #Concatenate and shuffle indices
+        indices = np.concatenate((indices_1, indices_2), axis=1)
+        indices = indices.reshape((indices.shape[1]))
+        np.random.shuffle(indices)
+
+
+        #Randomly sample from indices
+        indices_length = indices.shape[0]
+        indices = np.random.choice(indices, (indices_length-length_0), replace=False)
+
+        #Keep tweets and labels using only the indices found above
+        new_tweets = np.delete(np.array(self.tweets), indices)
+        new_labels = np.delete(np.array(self.labels), indices)
+        self.tweets = new_tweets.tolist()
+        self.labels = new_labels.tolist()
+
 
 if __name__ == "__main__":
     DATAFILE = "./Data/twitter_hate.csv"
     D = Data(DATAFILE, preprocess=True)
     D.augment_data()
-    print(len(D.tweets))
+    D._balance_dataset()
     #D._train_test_split(1)
 
     #print(D.raw_tweets[0])
