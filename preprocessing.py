@@ -122,10 +122,11 @@ class Data:
         new_tweets = []
         new_labels = []
         for tweet, label in tqdm(zip(self.tweets, self.labels), total=len(self.labels)):
-            results = self._augment_single_tweet(tweet)
-            new_tweets.extend(results)
-            new_labels.extend([label for _ in range(len(results))])
-            self.augmentations += len(results)
+            if int(label) == 0:
+                results = self._augment_single_tweet(tweet)
+                new_tweets.extend(results)
+                new_labels.extend([label for _ in range(len(results))])
+                self.augmentations += len(results)
 
         self.tweets.extend(new_tweets)
         self.labels.extend(new_labels)
@@ -192,7 +193,8 @@ if __name__ == "__main__":
     DATAFILE = "./Data/twitter_hate.csv"
     D = Data(DATAFILE, preprocess=True)
     D.augment_data()
-    D._train_test_split(1)
+    print(len(D.tweets))
+    #D._train_test_split(1)
 
     #print(D.raw_tweets[0])
     #print(type(D.tweets[0]))
