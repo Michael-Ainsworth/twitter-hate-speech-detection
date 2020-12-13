@@ -1,8 +1,10 @@
 import copy
+import numpy as np
 import pandas as pd
 import re
-
+from sklearn.model_selection import train_test_split
 import nltk
+nltk.download('averaged_perceptron_tagger')
 from nltk.corpus import wordnet as wn
 from nltk.tokenize import wordpunct_tokenize
 
@@ -22,12 +24,21 @@ class Data:
         self.raw_tweets, self.labels = self._load_data(filepath, preprocess)
         self.tweets = None
         self.augmentations = 0
+        self.train_tweets = None
+        self.train_labels = None
+        self.test_tweets = None
+        self.test_labels = None
 
         # Pre-process tweets
         if preprocess:
             self.tweets = [self._preprocess_tweet(t, tokenize=True, remove_stopwords=True) for t in self.raw_tweets]
 
-
+    def _train_test_split(self, seed):
+        X_train, X_test, y_train, y_test = train_test_split(np.array(self.tweets), np.array(self.labels), test_size=.2, random_state=seed)
+        self.train_tweets = X_train.tolist()
+        self.test_tweets = X_test.tolist()
+        self.train_labels = y_train.tolist()
+        self.test_labels = y_test.tolist()
 
     def _split_row(self, row, num_cols):
         """Given a main row of the file, split on the comma."""
@@ -71,6 +82,8 @@ class Data:
 
         tweet = [t for t in tweet if t] # remove blank spaces
         return tweet
+    def _TFIDF_doc_tokenize(self, tweet):
+        return list(tweet.split(' '))
 
     def _tokenize(self, tweet):
         """Split a tweet into lowercase tokens (including punctuation)."""
@@ -179,6 +192,8 @@ if __name__ == "__main__":
     DATAFILE = "./Data/twitter_hate.csv"
     D = Data(DATAFILE, preprocess=True)
     D.augment_data()
+    D._train_test_split(1)
+
     #print(D.raw_tweets[0])
     #print(type(D.tweets[0]))
     # quit()

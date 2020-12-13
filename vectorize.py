@@ -19,7 +19,7 @@ class TFIDFWordVectorizer(Vectorizer):
         super().__init__(dataset)
         self.params = {
             "analyzer": "word",
-            "tokenizer": dataset._tokenize,
+            "tokenizer": dataset._TFIDF_doc_tokenize,
             "stop_words": "english",
             "ngram_range": ngram_range,
             "max_df": 0.9,
@@ -29,17 +29,30 @@ class TFIDFWordVectorizer(Vectorizer):
             "sublinear_tf": False,
         }
         self.vectorizer = TfidfVectorizer(**self.params)
-        self.vectors = None
+        self.train_vectors = None
+        self.test_vectors = None
         self.vocab = None
 
     def vectorize(self, sparse=True):
-        term_doc_matrix = self.vectorizer.fit_transform(self.dataset.raw_tweets)
+        X_train = self.dataset.train_tweets
+        X_test = self.dataset.test_tweets
+
+        # Convert Splits from list of strings to string
+        for i in range(len(X_train)):
+            X_train[i] = ' '.join(X_train[i])
+
+        for i in range(len(X_test)):
+            X_test[i] = ' '.join(X_test[i])
+
+        term_doc_matrix = self.vectorizer.fit_transform(X_train)
         self.vocab = self.vectorizer.vocabulary_
         if not sparse:
-            self.vectors = term_doc_matrix.toarray()
+            self.train_vectors = term_doc_matrix.toarray()
         else:
-            self.vectors = term_doc_matrix
-        return self.vectors
+            self.train_vectors = term_doc_matrix
+
+        self.test_vectors = self.vectorizer.transform(X_test)
+        return self.train_vectors, self.test_vectors
 
 
 class TFIDFCharVectorizer(Vectorizer):
@@ -57,12 +70,24 @@ class TFIDFCharVectorizer(Vectorizer):
             "sublinear_tf": False,
         }
         self.vectorizer = TfidfVectorizer(**self.params)
-        self.vectors = None
+        self.train_vectors = None
+        self.test_vectors = None
 
     def vectorize(self):
-        term_doc_matrix = self.vectorizer.fit_transform(self.dataset.raw_tweets)
-        self.vectors = term_doc_matrix.toarray()
-        return self.vectors
+        X_train = self.dataset.train_tweets
+        X_test = self.dataset.test_tweets
+
+        #Convert Splits from list of strings to string
+        for i in range(len(X_train)):
+            X_train[i] = ' '.join(X_train[i])
+
+        for i in range(len(X_test)):
+            X_test[i] = ' '.join(X_test[i])
+
+        term_doc_matrix = self.vectorizer.fit_transform(X_train)
+        self.train_vectors = term_doc_matrix.toarray()
+        self.test_vectors = self.vectorizer.transform(X_test)
+        return self.train_vectors, self.test_vectors
 
 
 class CharEmbeddings(Vectorizer):
@@ -189,22 +214,24 @@ class DocEmbeddings(Vectorizer):
 if __name__ == "__main__":
     DATAFILE = "./Data/twitter_hate.csv"
     D = Data(DATAFILE, preprocess=True)
+    D._train_test_split(1)
+    #D.augment_data()
 
-    DE = DocEmbeddings(D, emb_path="./Data", emb_dim=50)
-    doc_vecs = DE.vectorize(success_rate=True)
-    print(DE.vectors.shape)
-    print(DE.vector_indices.shape)
+    #DE = DocEmbeddings(D, emb_path="./Data", emb_dim=50)
+    #doc_vecs = DE.vectorize(success_rate=True)
+    #print(DE.vectors.shape)
+    #print(DE.vector_indices.shape)
 
-    # word_V = TFIDFWordVectorizer(D)
-    # word_X = word_V.vectorize()
-    # print('Word TFIDF shape: ', word_X.shape)
+    word_V = TFIDFWordVectorizer(D)
+    word_X_train, word_X_test = word_V.vectorize()
+    print('Train Word TFIDF shape: ', word_X_train.shape)
+    print('Test Word TFIDF shape: ', word_X_test.shape)
 
-
-    # ngram_range = (3,3)
-    # char_V = TFIDFCharVectorizer(D, ngram_range)
-    # char_X = char_V.vectorize()
-    # print('Char TFIDF shape: ', char_X.shape)
-
+    #ngram_range = (3,3)
+    #char_V = TFIDFCharVectorizer(D, ngram_range)
+    #char_X_train, char_X_test = char_V.vectorize()
+    #print('Train Char TFIDF shape: ', char_X_train.shape)
+    #print('Test Char TFIDF shape: ', char_X_test.shape)
 
     #emb_V = CharEmbeddings(dataset=D, emb_path='./Data', emb_dim=5)
     # emb_V.parse(path='./Data')
