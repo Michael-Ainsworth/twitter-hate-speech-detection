@@ -121,15 +121,15 @@ class Data:
         # TODO: Implement this
         new_tweets = []
         new_labels = []
-        for tweet, label in tqdm(zip(self.tweets, self.labels), total=len(self.labels)):
+        for tweet, label in tqdm(zip(self.train_tweets, self.train_labels), total=len(self.train_labels)):
             if int(label) == 0:
                 results = self._augment_single_tweet(tweet)
                 new_tweets.extend(results)
                 new_labels.extend([label for _ in range(len(results))])
                 self.augmentations += len(results)
 
-        self.tweets.extend(new_tweets)
-        self.labels.extend(new_labels)
+        self.train_tweets.extend(new_tweets)
+        self.train_labels.extend(new_labels)
         return # TODO: return something
 
     def _candidate_to_replace(self, word, cand):
@@ -189,7 +189,7 @@ class Data:
         return new_data
 
     def _balance_dataset(self):
-        temp_labels = np.array(self.labels)
+        temp_labels = np.array(self.train_labels)
         length_0 = np.where(temp_labels == '0')[0].shape[0]
 
         #Find indices of non-hate speech classes
@@ -207,18 +207,19 @@ class Data:
         indices = np.random.choice(indices, (indices_length-length_0), replace=False)
 
         #Keep tweets and labels using only the indices found above
-        new_tweets = np.delete(np.array(self.tweets), indices)
-        new_labels = np.delete(np.array(self.labels), indices)
-        self.tweets = new_tweets.tolist()
-        self.labels = new_labels.tolist()
+        new_tweets = np.delete(np.array(self.train_tweets), indices)
+        new_labels = np.delete(np.array(self.train_labels), indices)
+        self.train_tweets = new_tweets.tolist()
+        self.train_labels = new_labels.tolist()
 
 
 if __name__ == "__main__":
     DATAFILE = "./Data/twitter_hate.csv"
     D = Data(DATAFILE, preprocess=True)
+    D._train_test_split(1)
     D.augment_data()
+
     D._balance_dataset()
-    #D._train_test_split(1)
 
     #print(D.raw_tweets[0])
     #print(type(D.tweets[0]))
