@@ -335,11 +335,111 @@ def test_neural_net(model, test_loader):
     
     return np.array(y_pred_list), np.array(y_pred_list_raw)
 
+def build_cnn_matrix(unprocessed_tweets):
+    max_len = 0
+    for e in unprocessed_tweets:
+        if len(e) > max_len:
+            max_len = len(e)
+
+    unique_chars = set()
+    for doc in unprocessed_tweets:
+        for char in doc:
+            unique_chars.add(char)
+
+    char_hash = {}
+    i = 0
+    for c in sorted(unique_chars):
+        char_hash[c] = i
+        i += 1
+
+    doc_list = []
+    for doc in unprocessed_tweets:
+        sample_mat = np.zeros([max_len, len(unique_chars)])
+        for i, char in enumerate(doc):
+            sample_mat[i,char_hash[char]] = 1
+        doc_list.append(sample_mat)
+    
+    doc_mat = np.stack(doc_list, axis=0)
+
+    return doc_mat
+
+class binaryCNN(nn.Module):
+    def __init__(self):
+        super(binaryCNN, self).__init__()
+        self.conv1 = torch.nn.Conv1d(X_train.shape[1], 10, kernel_size=10)
+        self.conv2 = torch.nn.Conv1d(10, 20, kernel_size=20)
+
+        self.layer_1 = nn.Linear(1360, 64) 
+        self.layer_2 = nn.Linear(64, 20)
+        self.layer_out = nn.Linear(20, 1) 
+        
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(p=0.1)
+        self.batchnorm1 = nn.BatchNorm1d(64)
+        self.batchnorm2 = nn.BatchNorm1d(20)
+        
+    def forward(self, inputs):
+        x = self.relu(self.conv1(inputs))
+        x = self.relu(self.conv2(x))
+
+        x = x.view(x.shape[0], x.shape[1]*x.shape[2])
+        x = self.relu(self.layer_1(x))
+        x = self.batchnorm1(x)
+        x = self.relu(self.layer_2(x))
+        x = self.batchnorm2(x)
+        x = self.dropout(x)
+        x = self.layer_out(x)
+        
+        return x
+
+def train_cnn(train_loader, epochs, learning_rate):
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(device)
+
+    model = binaryCNN()
+    model.to(device)
+    print(model)
+    criterion = nn.BCEWithLogitsLoss()
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
+    model.train()
+    for e in range(1, epochs+1):
+        epoch_loss = 0
+        epoch_acc = 0
+        for X_batch, y_batch in train_loader:
+            X_batch, y_batch = X_batch.to(device), y_batch.to(device)
+            optimizer.zero_grad()
+
+            y_pred = model(X_batch)
+
+            loss = criterion(y_pred, y_batch.unsqueeze(1))
+            acc = binary_acc(y_pred, y_batch.unsqueeze(1))
+
+            loss.backward()
+            optimizer.step()
+
+            epoch_loss += loss.item()
+            epoch_acc += acc.item()
+
+
+        print(f'Epoch {e+0:03}: | Loss: {epoch_loss/len(train_loader):.5f} | Acc: {epoch_acc/len(train_loader):.3f}')
+    return model
+
 
 if __name__ == "__main__":
     DATAFILE = "./Data/twitter_hate.csv"
-    D = Data(DATAFILE, preprocess=True)
+    # D = Data(DATAFILE, preprocess=True)
     DE = False # boolean for checking if we're using doc embeddings or not. Just for convenience
+    D = Data(DATAFILE, preprocess=False)
+ 
+    no_emojis = []
+    for doc in D.raw_tweets:
+        no_emojis.append(D._fix_escaped_tokens(doc))
+
+    mat = build_cnn_matrix(no_emojis)
+
+
+
 
     #### RUN WORD TFIDF #####
     # ngram_range = (2,2)
@@ -360,10 +460,10 @@ if __name__ == "__main__":
     # print('Char embeddings shape: ', char_vecs.shape)
 
     #### RUN DOC EMBEDDINGS #####
-    DE = True
-    doc_emb = DocEmbeddings(D, emb_path="./Data", emb_dim=300)
-    doc_vecs = doc_emb.vectorize(success_rate=True)
-    print('Doc embeddings shape: ', doc_vecs.shape)
+    # DE = True
+    # doc_emb = DocEmbeddings(D, emb_path="./Data", emb_dim=300)
+    # doc_vecs = doc_emb.vectorize(success_rate=True)
+    # print('Doc embeddings shape: ', doc_vecs.shape)
 
 
     #### Generate Labels #####
@@ -377,7 +477,7 @@ if __name__ == "__main__":
 
 
     ##### Train test split #####
-    X_train, X_test, y_train, y_test = train_test_split(doc_vecs, labels, test_size=0.33, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(mat, labels, test_size=0.33, random_state=42)
 
     # m = LogisticRegressionModel()
     # m = RandomForestModel()
@@ -392,13 +492,28 @@ if __name__ == "__main__":
 
 
     ##### Neural Network #####
-    if type(X_train) == csr_matrix:
-        X_train = X_train.todense()
-        X_test = X_test.todense()
-    scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.fit_transform(X_test)
+    # if type(X_train) == csr_matrix:
+    #     X_train = X_train.todense()
+    #     X_test = X_test.todense()
+    # scaler = StandardScaler()
+    # X_train = scaler.fit_transform(X_train)
+    # X_test = scaler.fit_transform(X_test)
 
+    # train_data = trainData(torch.FloatTensor(X_train), 
+    #                     torch.FloatTensor(y_train))
+    # test_data = testData(torch.FloatTensor(X_test))
+
+    # train_loader = DataLoader(dataset=train_data, batch_size=64, shuffle=True)
+    # test_loader = DataLoader(dataset=test_data, batch_size=1)
+
+    # model = train_neural_net(train_loader, 10, 0.001)
+
+    # preds, raw_preds = test_neural_net(model, test_loader)
+
+    # binary_metrics(y_test, raw_preds, preds)
+
+
+    ##### Convolutional Neural Network #####
     train_data = trainData(torch.FloatTensor(X_train), 
                         torch.FloatTensor(y_train))
     test_data = testData(torch.FloatTensor(X_test))
@@ -406,10 +521,8 @@ if __name__ == "__main__":
     train_loader = DataLoader(dataset=train_data, batch_size=64, shuffle=True)
     test_loader = DataLoader(dataset=test_data, batch_size=1)
 
-    model = train_neural_net(train_loader, 10, 0.001)
-
-    preds, raw_preds = test_neural_net(model, test_loader)
-
+    model = train_cnn(train_loader, 10, 0.001)
+    preds, raw_preds = test_neural_net(model, test_loader
     binary_metrics(y_test, raw_preds, preds)
 
 
