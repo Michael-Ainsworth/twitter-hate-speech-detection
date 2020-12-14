@@ -1,10 +1,11 @@
 from preprocessing import Data
 from vectorize import TFIDFCharVectorizer, TFIDFWordVectorizer, CharEmbeddings, DocEmbeddings
 from metrics import binary_metrics
-
+import nltk
+nltk.download('wordnet')
 
 import numpy as np
-
+import pickle
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
@@ -138,7 +139,7 @@ class SVMModel():
         self.score = None
 
         #-----COMMENT OUT THIS LINE WHEN USING HYPERPARAMETER TUNING-----#
-        self.model = svm.SVC()
+        self.model = svm.SVC(probability = True)
         #----------------------------------------------------------------#
 
         """
@@ -178,6 +179,8 @@ class SVMModel():
         #print(self.model.best_params_)
 
     def predict(self, X_test, y_test):
+        print(type(X_test))
+        print(type(y_test))
         raw_preds = self.model.predict_proba(X_test)
         self.score = self.model.score(X_test, y_test)
         preds = self.model.predict(X_test)
@@ -429,29 +432,31 @@ def train_cnn(train_loader, epochs, learning_rate, data_shape):
 
 if __name__ == "__main__":
     DATAFILE = "./Data/twitter_hate.csv"
-    # D = Data(DATAFILE, preprocess=True)
+    D = Data(DATAFILE, preprocess=True)
     DE = False # boolean for checking if we're using doc embeddings or not. Just for convenience
-    D = Data(DATAFILE, preprocess=False)
- 
-    no_emojis = []
-    for doc in D.raw_tweets:
-        no_emojis.append(D._fix_escaped_tokens(doc))
+    # D = Data(DATAFILE, preprocess=False)
+    D.augment_data()
+    D._balance_dataset()
+    D._train_test_split(1)
+    # no_emojis = []
+    # for doc in D.raw_tweets:
+    #     no_emojis.append(D._fix_escaped_tokens(doc))
 
-    mat = build_cnn_matrix(no_emojis)
+    # mat = build_cnn_matrix(no_emojis)
 
 
 
-    #### RUN WORD TFIDF #####
+    # #### RUN WORD TFIDF #####
     # ngram_range = (2,2)
     # word_V = TFIDFWordVectorizer(D, ngram_range)
     # word_X = word_V.vectorize()
     # print('Word TFIDF shape: ', word_X.shape)
 
-    ##### RUN CHAR TFIDF #####
-    # ngram_range = (2,2)
-    # char_V = TFIDFCharVectorizer(D, ngram_range)
-    # char_X = char_V.vectorize()
-    # print('Char TFIDF shape: ', char_X.shape)
+    #### RUN CHAR TFIDF #####
+    ngram_range = (2,2)
+    char_V = TFIDFCharVectorizer(D, ngram_range)
+    char_X = char_V.vectorize()
+    print('Char TFIDF shape: ', char_X[0].shape)
     
 
     ##### RUN CHAR EMBEDDINGS #####
@@ -471,23 +476,51 @@ if __name__ == "__main__":
         labels = np.array(D.labels).astype(float)[char_X.vector_indices]
     else:
         labels = np.array(D.labels).astype(float)
-    labels = np.where(labels < 0.5, 1, 0)
-    print('Label shape: ', labels.shape)
+        
+    y_train = np.array(D.train_labels).astype(np.float)
+    y_test = np.array(D.test_labels).astype(np.float)
+    y_train = np.where(y_train < 0.5, 1, 0)
+    y_test = np.where(y_test < 0.5, 1, 0)
+   # print('Label shape: ', labels.shape)
    
 
 
     ##### Train test split #####
-    X_train, X_test, y_train, y_test = train_test_split(mat, labels, test_size=0.33, random_state=42)
+    #X_train, X_test, y_train, y_test = train_test_split(char_X, labels, test_size=0.33, random_state=42)
 
     # m = LogisticRegressionModel()
     # m = RandomForestModel()
-    # m = SVMModel()
+    m = SVMModel()
     # m = AdaBoostModel()
+    
+    X_train = np.array(char_X[0])
+    X_test = char_X[1].toarray()
+    
+    # print(X_train.shape)
+    # print(X_test.shape)
+    
+    # print(type(X_test))
+    # quit()
+    # print(char_X[0].dtype)
+    # print(char_X[1].dtype)
+    # print(y_train.dtype)
+    # print(y_test.dtype)
+    
+    #char_X[0] = char_X[0].todense()
+    #char_X[1] = char_X[1].todense()
+    #y_test = y_test.todense()
+    #y_train = y_train.todense()
+        
+    
+    m.fit(X_train, y_train)
+    # pickle.dump(m, open("./test.b", "wb"))
+    # quit
+    #m = pickle.load(open("./test.b", "rb"))
+    #m.fit(X_train, y_train)
 
-    # m.fit(X_train, y_train)
-    # score, preds, raw_preds = m.predict(X_test, y_test)
-    # print(score)
-    # binary_metrics(y_test, raw_preds, preds)
+    score, preds, raw_preds = m.predict(X_test, y_test)
+    print(score)
+    binary_metrics(y_test, raw_preds, preds)
 
 
 
@@ -514,16 +547,16 @@ if __name__ == "__main__":
 
 
     ##### Convolutional Neural Network #####
-    train_data = trainData(torch.FloatTensor(X_train), 
-                        torch.FloatTensor(y_train))
-    test_data = testData(torch.FloatTensor(X_test))
+    # train_data = trainData(torch.FloatTensor(X_train), 
+    #                     torch.FloatTensor(y_train))
+    # test_data = testData(torch.FloatTensor(X_test))
 
-    train_loader = DataLoader(dataset=train_data, batch_size=64, shuffle=True)
-    test_loader = DataLoader(dataset=test_data, batch_size=1)
+    # train_loader = DataLoader(dataset=train_data, batch_size=64, shuffle=True)
+    # test_loader = DataLoader(dataset=test_data, batch_size=1)
 
-    model = train_cnn(train_loader, 10, 0.001, X_train.shape)
-    preds, raw_preds = test_neural_net(model, test_loader)
-    binary_metrics(y_test, raw_preds, preds)
+    # model = train_cnn(train_loader, 10, 0.001, X_train.shape)
+    # preds, raw_preds = test_neural_net(model, test_loader)
+    # binary_metrics(y_test, raw_preds, preds)
 
 
     pass
