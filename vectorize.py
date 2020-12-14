@@ -95,6 +95,8 @@ class CharEmbeddings(Vectorizer):
         super().__init__(dataset)
         self.emb_dim = emb_dim
         self.embeddings = self.parse(emb_path)
+        self.train_vectors = None
+        self.test_vectors = None
 
     def parse(self, path):
         # return embeddings
@@ -127,12 +129,14 @@ class CharEmbeddings(Vectorizer):
 
     def vectorize(self):
         # Vectorize each tweet
-        vecs = [self._make_vector(''.join(tweet)) for tweet in self.dataset.tweets]
+        vecs_train = [self._make_vector(''.join(tweet)) for tweet in self.dataset.train_tweets]
+        vecs_test = [self._make_vector(''.join(tweet)) for tweet in self.dataset.test_tweets]
 
         # Create matrix with all valid document embeddings
-        self.vectors = np.stack(vecs, axis=0)
+        self.test_vectors = np.stack(vecs_test, axis=0)
+        self.train_vectors = np.stack(vecs_train, axis=0)
 
-        return self.vectors
+        return self.train_vectors, self.test_vectors
 
 
 class DocEmbeddings(Vectorizer):
@@ -142,8 +146,10 @@ class DocEmbeddings(Vectorizer):
         self.scheme = scheme
 
         self.embeddings = self.load_word_embeddings(emb_path, lim=limit) # can add limit argument to make development a bit faster
-        self.vectors = None
-        self.vector_indices = None
+        self.train_vectors = None
+        self.test_vectors = None
+        self.train_vector_indices = None
+        self.test_vector_indices = None
 
         # Some counters to compute metrics for the vectorization
         self.total_tokens = 0
@@ -194,38 +200,47 @@ class DocEmbeddings(Vectorizer):
 
     def vectorize(self, success_rate=False):
         # Vectorize each tweet
-        vecs = [self._make_vector(tweet) for tweet in self.dataset.tweets]
+        vecs_train = [self._make_vector(tweet) for tweet in self.dataset.train_tweets]
+        vecs_test = [self._make_vector(tweet) for tweet in self.dataset.test_tweets]
 
         # Some tweets can't be vectorized, so drop those
-        self.vector_indices = np.array([i for i in range(len(vecs)) if vecs[i] is not None])
-        reduced_vecs = [v for v in vecs if v is not None]
+        self.train_vector_indices = np.array([i for i in range(len(vecs_train)) if vecs_train[i] is not None])
+        reduced_vecs_train = [v for v in vecs_train if v is not None]
+
+        # Some tweets can't be vectorized, so drop those
+        self.test_vector_indices = np.array([i for i in range(len(vecs_test)) if vecs_test[i] is not None])
+        reduced_vecs_test = [v for v in vecs_test if v is not None]
 
         # Create matrix with all valid document embeddings
-        self.vectors = np.stack(reduced_vecs, axis=0)
+        self.train_vectors = np.stack(reduced_vecs_train, axis=0)
+        self.test_vectors = np.stack(reduced_vecs_test, axis=0)
 
         # Calculate success rate
         if success_rate:
             sr = round(100 * self.successful_replacements / self.total_tokens, 2)
             print(f"Found embeddings for {sr}% of all possible tokens")
 
-        return self.vectors
+        return self.train_vectors, self.test_vectors
 
 
 if __name__ == "__main__":
     DATAFILE = "./Data/twitter_hate.csv"
     D = Data(DATAFILE, preprocess=True)
     D._train_test_split(1)
-    #D.augment_data()
+    D.augment_data()
+    D._balance_dataset()
+
 
     #DE = DocEmbeddings(D, emb_path="./Data", emb_dim=50)
-    #doc_vecs = DE.vectorize(success_rate=True)
-    #print(DE.vectors.shape)
-    #print(DE.vector_indices.shape)
+    #doc_vecs_train, doc_vecs_test = DE.vectorize(success_rate=True)
+    #doc_emb_y_train = np.take(np.array(D.train_labels), DE.train_vector_indices)
+    #doc_emb_y_test = np.take(np.array(D.test_labels), DE.test_vector_indices)
 
-    word_V = TFIDFWordVectorizer(D)
-    word_X_train, word_X_test = word_V.vectorize()
-    print('Train Word TFIDF shape: ', word_X_train.shape)
-    print('Test Word TFIDF shape: ', word_X_test.shape)
+
+    #word_V = TFIDFWordVectorizer(D)
+    #word_X_train, word_X_test = word_V.vectorize()
+    #print('Train Word TFIDF shape: ', word_X_train.shape)
+    #print('Test Word TFIDF shape: ', word_X_test.shape)
 
     #ngram_range = (3,3)
     #char_V = TFIDFCharVectorizer(D, ngram_range)
@@ -234,8 +249,11 @@ if __name__ == "__main__":
     #print('Test Char TFIDF shape: ', char_X_test.shape)
 
     #emb_V = CharEmbeddings(dataset=D, emb_path='./Data', emb_dim=5)
-    # emb_V.parse(path='./Data')
-    # emb_V.test()
-    #vecs = emb_V.vectorize()
-    # emb_V
+    #emb_V.parse(path='./Data')
+    #emb_V.test()
+    #train_vecs, test_vecs = emb_V.vectorize()
+    #print(train_vecs.shape)
+    #print(test_vecs.shape)
+    #print(np.unique(np.array(D.train_labels), return_counts=True))
+    #print(np.unique(np.array(D.test_labels), return_counts=True))
     pass
