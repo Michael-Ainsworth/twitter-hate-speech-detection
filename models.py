@@ -139,22 +139,22 @@ class SVMModel():
         self.score = None
 
         #-----COMMENT OUT THIS LINE WHEN USING HYPERPARAMETER TUNING-----#
-        #self.model = svm.SVC(probability = True)
+        self.model = svm.SVC(probability = True)
         #----------------------------------------------------------------#
 
-        
+        """
         ############### HYPERPARAMETER SEARCH  ###############
         #Create base model for search
         self.model_base = svm.SVC()
 
         # Set C Search Vector
-        self.svc_C = [0.1,1,10]
+        self.svc_C = [10]
 
         #Set Kernel Search Vector
         self.svc_kernel= ['rbf']
 
         #Set Gamma Vector
-        self.svc_gamma = ['scale', 'auto']
+        self.svc_gamma = ['auto']
 
         #set Probability Vector
         self.svc_probability = [True]
@@ -163,16 +163,16 @@ class SVMModel():
         self.grid = {'C': self.svc_C,
                      'kernel': self.svc_kernel,
                      'gamma': self.svc_gamma,
-                     'probability': self.svc.probability}
+                     'probability': self.svc_probability}
 
         #Create grid search estimator
-        self.model = GridSearchCV(estimator = self.model_base, param_grid = self.grid, cv = 5, verbose = 0, random_state = 42, n_jobs = -1)
+        self.model = GridSearchCV(estimator = self.model_base, param_grid = self.grid, cv = 5, verbose = 0, n_jobs = -1)
         ########## END HYPERPARAMETER SEARCH  ##########
-        
+        """
 
     def fit(self, X_train, y_train):
         self.model.fit(X_train, y_train)
-        #print(self.model.best_params_)
+        print(self.model.best_params_)
 
     def predict(self, X_test, y_test):
         print(type(X_test))
@@ -485,8 +485,8 @@ if __name__ == "__main__":
     #X_train, X_test, y_train, y_test = train_test_split(char_X, labels, test_size=0.33, random_state=42)
 
     # m = LogisticRegressionModel()
-    m = RandomForestModel()
-    # m = SVMModel()
+    # m = RandomForestModel()
+    m = SVMModel()
     # m = AdaBoostModel()
     
     # X_train = np.array(doc_vecs[0])
