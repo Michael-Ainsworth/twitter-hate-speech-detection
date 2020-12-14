@@ -252,10 +252,10 @@ class testData(Dataset):
         return len(self.X_data)
 
 class binaryClassification(nn.Module):
-    def __init__(self):
+    def __init__(self, data_shape):
         super(binaryClassification, self).__init__()
-        # Number of input features is 12.
-        self.layer_1 = nn.Linear(X_train.shape[1], 64) 
+        self.input_shape = data_shape
+        self.layer_1 = nn.Linear(self.input_shape[1], 64) 
         self.layer_2 = nn.Linear(64, 64)
         self.layer_out = nn.Linear(64, 1) 
         
@@ -283,11 +283,11 @@ def binary_acc(y_pred, y_test):
     
     return acc
 
-def train_neural_net(train_loader, epochs, learning_rate):
+def train_neural_net(train_loader, epochs, learning_rate, data_shape):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(device)
 
-    model = binaryClassification()
+    model = binaryClassification(data_shape)
     model.to(device)
     print(model)
     criterion = nn.BCEWithLogitsLoss()
@@ -364,9 +364,10 @@ def build_cnn_matrix(unprocessed_tweets):
     return doc_mat
 
 class binaryCNN(nn.Module):
-    def __init__(self):
+    def __init__(self, data_shape):
         super(binaryCNN, self).__init__()
-        self.conv1 = torch.nn.Conv1d(X_train.shape[1], 10, kernel_size=10)
+        self.input_shape = data_shape
+        self.conv1 = torch.nn.Conv1d(self.input_shape[1], 10, kernel_size=10)
         self.conv2 = torch.nn.Conv1d(10, 20, kernel_size=20)
 
         self.layer_1 = nn.Linear(1360, 64) 
@@ -392,11 +393,11 @@ class binaryCNN(nn.Module):
         
         return x
 
-def train_cnn(train_loader, epochs, learning_rate):
+def train_cnn(train_loader, epochs, learning_rate, data_shape):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(device)
 
-    model = binaryCNN()
+    model = binaryCNN(data_shape)
     model.to(device)
     print(model)
     criterion = nn.BCEWithLogitsLoss()
@@ -440,7 +441,6 @@ if __name__ == "__main__":
 
 
 
-
     #### RUN WORD TFIDF #####
     # ngram_range = (2,2)
     # word_V = TFIDFWordVectorizer(D, ngram_range)
@@ -468,7 +468,7 @@ if __name__ == "__main__":
 
     #### Generate Labels #####
     if DE:
-        labels = np.array(D.labels).astype(float)[doc_emb.vector_indices]
+        labels = np.array(D.labels).astype(float)[char_X.vector_indices]
     else:
         labels = np.array(D.labels).astype(float)
     labels = np.where(labels < 0.5, 1, 0)
@@ -521,8 +521,8 @@ if __name__ == "__main__":
     train_loader = DataLoader(dataset=train_data, batch_size=64, shuffle=True)
     test_loader = DataLoader(dataset=test_data, batch_size=1)
 
-    model = train_cnn(train_loader, 10, 0.001)
-    preds, raw_preds = test_neural_net(model, test_loader
+    model = train_cnn(train_loader, 10, 0.001, X_train.shape)
+    preds, raw_preds = test_neural_net(model, test_loader)
     binary_metrics(y_test, raw_preds, preds)
 
 
