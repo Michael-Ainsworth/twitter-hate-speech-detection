@@ -139,16 +139,16 @@ class SVMModel():
         self.score = None
 
         #-----COMMENT OUT THIS LINE WHEN USING HYPERPARAMETER TUNING-----#
-        self.model = svm.SVC(probability = True)
+        #self.model = svm.SVC(probability = True)
         #----------------------------------------------------------------#
 
-        """
+        
         ############### HYPERPARAMETER SEARCH  ###############
         #Create base model for search
         self.model_base = svm.SVC()
 
         # Set C Search Vector
-        self.svc_C = [0.00001,0.0001,0.001,0.01,0.1,1,10,100]
+        self.svc_C = [0.1,1,10]
 
         #Set Kernel Search Vector
         self.svc_kernel= ['rbf']
@@ -159,20 +159,16 @@ class SVMModel():
         #set Probability Vector
         self.svc_probability = [True]
 
-        #set Random State
-        self.svc_random_state = [int(x) for x in np.linspace(0,50,5)]
-
         #Create Hyperparameter Grid as Dictionary
         self.grid = {'C': self.svc_C,
                      'kernel': self.svc_kernel,
                      'gamma': self.svc_gamma,
-                     'probability': self.svc.probability,
-                     'random_state': self.svc.random_state}
+                     'probability': self.svc.probability}
 
         #Create grid search estimator
         self.model = GridSearchCV(estimator = self.model_base, param_grid = self.grid, cv = 5, verbose = 0, random_state = 42, n_jobs = -1)
         ########## END HYPERPARAMETER SEARCH  ##########
-        """
+        
 
     def fit(self, X_train, y_train):
         self.model.fit(X_train, y_train)
@@ -432,12 +428,12 @@ def train_cnn(train_loader, epochs, learning_rate, data_shape):
 
 if __name__ == "__main__":
     DATAFILE = "./Data/twitter_hate.csv"
-    D = Data(DATAFILE, preprocess=True)
     DE = False # boolean for checking if we're using doc embeddings or not. Just for convenience
     # D = Data(DATAFILE, preprocess=False)
+    D = Data(DATAFILE, preprocess=True)
+    D._train_test_split(100)
     D.augment_data()
     D._balance_dataset()
-    D._train_test_split(1)
     # no_emojis = []
     # for doc in D.raw_tweets:
     #     no_emojis.append(D._fix_escaped_tokens(doc))
@@ -450,25 +446,25 @@ if __name__ == "__main__":
     # ngram_range = (2,2)
     # word_V = TFIDFWordVectorizer(D, ngram_range)
     # word_X = word_V.vectorize()
-    # print('Word TFIDF shape: ', word_X.shape)
+    # # print('Word TFIDF shape: ', word_X.shape)
 
-    #### RUN CHAR TFIDF #####
+    ### RUN CHAR TFIDF #####
     ngram_range = (2,2)
     char_V = TFIDFCharVectorizer(D, ngram_range)
     char_X = char_V.vectorize()
-    print('Char TFIDF shape: ', char_X[0].shape)
+    # print('Char TFIDF shape: ', char_X[0].shape)
     
 
-    ##### RUN CHAR EMBEDDINGS #####
+    # ##### RUN CHAR EMBEDDINGS #####
     # char_emb = CharEmbeddings(dataset=D, emb_path='./Data', emb_dim=300)
     # char_vecs = char_emb.vectorize()
-    # print('Char embeddings shape: ', char_vecs.shape)
+    # #print('Char embeddings shape: ', char_vecs.shape)
 
-    #### RUN DOC EMBEDDINGS #####
+    # ### RUN DOC EMBEDDINGS #####
     # DE = True
     # doc_emb = DocEmbeddings(D, emb_path="./Data", emb_dim=300)
     # doc_vecs = doc_emb.vectorize(success_rate=True)
-    # print('Doc embeddings shape: ', doc_vecs.shape)
+    # # print('Doc embeddings shape: ', doc_vecs.shape)
 
 
     #### Generate Labels #####
@@ -489,15 +485,27 @@ if __name__ == "__main__":
     #X_train, X_test, y_train, y_test = train_test_split(char_X, labels, test_size=0.33, random_state=42)
 
     # m = LogisticRegressionModel()
-    # m = RandomForestModel()
-    m = SVMModel()
+    m = RandomForestModel()
+    # m = SVMModel()
     # m = AdaBoostModel()
+    
+    # X_train = np.array(doc_vecs[0])
+    # X_test = doc_vecs[1]
+    
+    # X_train = np.array(char_vecs[0])
+    # X_test = char_vecs[1]
+    
+    # X_train =word_X[0].toarray()
+    # X_test = word_X[1].toarray()
     
     X_train = np.array(char_X[0])
     X_test = char_X[1].toarray()
     
-    # print(X_train.shape)
-    # print(X_test.shape)
+    
+    #print(X_train.shape)
+    #print(X_test.shape)
+    #print(y_train.shape)
+    #print(y_test.shape)
     
     # print(type(X_test))
     # quit()
