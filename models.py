@@ -172,7 +172,6 @@ class SVMModel():
 
     def fit(self, X_train, y_train):
         self.model.fit(X_train, y_train)
-        print(self.model.best_params_)
 
     def predict(self, X_test, y_test):
         print(type(X_test))
