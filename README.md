@@ -17,4 +17,6 @@ The files in this repository are not meant to be run directly. Rather, you shoul
 
 `vectorize.py`- contains 4 classes, one for each vectorizer: TFIDFWordVectorizer, TFIDFCharVectorizer, CharEmbeddings, and DocEmbeddings. When instantiating these classes, you must provide a Data object.
 
-`models.py` - contains 
+`models.py` - contains classes to run each model. These include: LogisticRegressionModel, RandomForestModel, SVMModel, AdaBoostModel, BinaryNN, and ConvolutionalNN. There are also a handful of helper functions that are used for training and evaluating the networks. These models must be instantiated and then fit using the data. The neural networks can be run using the train_neural_net and the train_cnn functions.
+
+`metrics.py` - contains evaluation metrics for the outputs of the models. Must input y_test, predictions (rounded to 0/1), and the raw predictions (not rounded). This function returns the confusion matrix, classification report, ROC curve, and Precision-Recall curve of the given model.
